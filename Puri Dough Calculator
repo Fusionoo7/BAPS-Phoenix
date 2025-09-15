@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Puri Production Calculator</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#121a2b;--muted:#90a3bd;--accent:#2dd4bf;--accent-2:#60a5fa;--text:#e8eef7;--ok:#22c55e;--warn:#f59e0b;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:linear-gradient(180deg,#0b1220 0%,#0e172a 100%);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
+    .wrap{max-width:920px;margin:24px auto;padding:16px}
+    .card{background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:20px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    h1{font-size:clamp(22px,3.2vw,30px);margin:0 0 12px;letter-spacing:.2px}
+    p.sub{margin:0 0 18px;color:var(--muted)}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
+    .col-6{grid-column:span 6}
+    .col-12{grid-column:span 12}
+    @media (max-width:720px){.col-6{grid-column:span 12}}
+    label{display:block;font-weight:600;margin:6px 0;color:#cbd5e1}
+    input, select{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);background:rgba(6,12,24,.6);color:var(--text);outline:none}
+    input:focus,select:focus{border-color:var(--accent-2);box-shadow:0 0 0 3px rgba(96,165,250,.25)}
+    .card-ghost{background:rgba(255,255,255,.02);border:1px dashed rgba(255,255,255,.12);border-radius:14px;padding:14px}
+    .out{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;background:rgba(10,16,34,.6);border:1px solid rgba(255,255,255,.08)}
+    .out b{font-size:18px}
+    .unit{color:var(--muted);font-size:13px;margin-left:6px}
+    .kpi{font-size:22px;letter-spacing:.3px}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    button{cursor:pointer;border:1px solid rgba(255,255,255,.14);background:linear-gradient(180deg,#111c33,#0e182b);color:var(--text);padding:10px 14px;border-radius:12px}
+    button:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,212,191,.2)}
+    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.03);font-size:12px;color:var(--muted)}
+    .fine{font-size:12px;color:var(--muted)}
+    .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .link{color:#93c5fd;text-decoration:none}
+    .link:hover{text-decoration:underline}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Puri Production Calculator</h1>
+      <p class="sub">Inputs on the left. Outputs update live. Share the URL to share the exact scenario.</p>
+      <div class="grid">
+        <div class="col-6">
+          <div class="card-ghost">
+            <label for="people">Number of people</label>
+            <input id="people" type="number" min="0" step="1" value="50" />
+
+            <label for="rpp">Puris per person</label>
+            <input id="rpp" type="number" min="0" step="1" value="4" />
+
+            <label for="size">Puri size</label>
+            <select id="size">
+              <option value="3.5">3.5 inch</option>
+              <option value="4">4.0 inch</option>
+            </select>
+
+            <label for="waterPerCup">Water per flour cup (cups)</label>
+            <input id="waterPerCup" type="number" min="0" step="0.01" value="0.50" />
+
+            <div class="row" style="margin-top:12px">
+              <button id="copyBtn" title="Copy outputs">Copy results</button>
+              <button id="resetBtn" title="Reset to defaults">Reset</button>
+              <button id="printBtn" title="Print a pick list">Print</button>
+            </div>
+          </div>
+
+          <div class="fine" style="margin-top:10px">
+            Assumptions: 3.5" → 53 puris/cup · 4" → 43 puris/cup · Oil = 16 oz / 250 puris · Salt = 1 spoon / 100 puris
+          </div>
+        </div>
+
+        <div class="col-6">
+          <div class="grid">
+            <div class="col-12 out"><span>Total puris</span><b class="kpi" id="o_total">0</b></div>
+            <div class="col-12 out"><span>Flour needed</span><b class="kpi" id="o_flour">0</b><span class="unit">cups</span></div>
+            <div class="col-12 out"><span>Oil needed</span><b class="kpi" id="o_oil">0</b><span class="unit">oz</span></div>
+            <div class="col-12 out"><span>Salt needed</span><b class="kpi" id="o_salt">0</b><span class="unit">spoons</span></div>
+            <div class="col-12 out"><span>Water needed</span><b class="kpi" id="o_water">0</b><span class="unit">cups</span></div>
+          </div>
+
+          <div class="footer">
+            <span class="pill" id="yieldPill">Yield: 53 puris/cup</span>
+            <a class="link" href="#" id="shareLink">Copy shareable link</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="fine" style="margin-top:12px">Tip: Bookmark after changing inputs. The URL stores values. Works offline after first load.</div>
+  </div>
+
+  <script>
+    // Constants
+    const YIELD_3_5 = 53; // puris per cup
+    const YIELD_4_0 = 43; // puris per cup
+    const OIL_PER_PURi_OZ = 16/250; // 0.064 oz per puri
+    const SALT_PER_PURi_SPOON = 1/100; // 0.01 spoon per puri
+
+    // Elements
+    const el = id => document.getElementById(id);
+    const people = el('people');
+    const rpp = el('rpp');
+    const size = el('size');
+    const waterPerCup = el('waterPerCup');
+
+    const o_total = el('o_total');
+    const o_flour = el('o_flour');
+    const o_oil = el('o_oil');
+    const o_salt = el('o_salt');
+    const o_water = el('o_water');
+    const yieldPill = el('yieldPill');
+    const shareLink = el('shareLink');
+
+    // Utils
+    const clamp = (v,min,max)=>Math.min(Math.max(v,min),max);
+    const toNum = (v, def=0)=>{const n = Number(v); return Number.isFinite(n)?n:def};
+    const fmt0 = n => (Math.round(n)).toString();
+    const fmt1 = n => (Math.round(n*10)/10).toFixed(1);
+    const fmt2 = n => (Math.round(n*100)/100).toFixed(2);
+
+    function currentYield(){
+      return size.value === '3.5' ? YIELD_3_5 : YIELD_4_0;
+    }
+
+    function compute(){
+      const P = clamp(Math.floor(toNum(people.value,0)),0,1_000_000);
+      const R = clamp(Math.floor(toNum(rpp.value,0)),0,10_000);
+      const total = P * R;
+      const y = currentYield();
+      const cupsFlour = total / y;
+      const oilOz = total * OIL_PER_PURi_OZ;
+      const saltSpoons = total * SALT_PER_PURi_SPOON;
+      const waterCups = cupsFlour * toNum(waterPerCup.value,0.5);
+
+      // Render
+      o_total.textContent = fmt0(total);
+      o_flour.textContent = fmt2(cupsFlour);
+      o_oil.textContent = fmt1(oilOz);
+      o_salt.textContent = fmt1(saltSpoons);
+      o_water.textContent = fmt2(waterCups);
+      yieldPill.textContent = `Yield: ${y} puris/cup`;
+
+      persist();
+      updateURL();
+    }
+
+    function persist(){
+      const data = {
+        people: people.value,
+        rpp: rpp.value,
+        size: size.value,
+        waterPerCup: waterPerCup.value,
+      };
+      localStorage.setItem('puriCalc', JSON.stringify(data));
+    }
+
+    function restore(){
+      // 1) URL params override
+      const sp = new URLSearchParams(location.search);
+      const q = (k,d)=> sp.get(k) ?? d;
+      const hasParams = sp.has('p')||sp.has('r')||sp.has('s')||sp.has('w');
+      if(hasParams){
+        people.value = q('p', people.value);
+        rpp.value = q('r', rpp.value);
+        size.value = q('s', size.value);
+        waterPerCup.value = q('w', waterPerCup.value);
+        return;
+      }
+      // 2) Local storage fallback
+      const raw = localStorage.getItem('puriCalc');
+      if(!raw) return;
+      try{
+        const data = JSON.parse(raw);
+        if(data.people) people.value = data.people;
+        if(data.rpp) rpp.value = data.rpp;
+        if(data.size) size.value = data.size;
+        if(data.waterPerCup) waterPerCup.value = data.waterPerCup;
+      }catch{}
+    }
+
+    function updateURL(){
+      const u = new URL(location.href);
+      u.searchParams.set('p', people.value);
+      u.searchParams.set('r', rpp.value);
+      u.searchParams.set('s', size.value);
+      u.searchParams.set('w', waterPerCup.value);
+      history.replaceState(null, '', u);
+    }
+
+    // Actions
+    el('copyBtn').addEventListener('click', async ()=>{
+      const lines = [
+        `Total puris: ${o_total.textContent}`,
+        `Flour: ${o_flour.textContent} cups`,
+        `Oil: ${o_oil.textContent} oz`,
+        `Salt: ${o_salt.textContent} spoons`,
+        `Water: ${o_water.textContent} cups`,
+      ];
+      const text = lines.join('\n');
+      try{ await navigator.clipboard.writeText(text);}catch{}
+    });
+
+    el('resetBtn').addEventListener('click', ()=>{
+      people.value = 50; rpp.value = 4; size.value = '3.5'; waterPerCup.value = 0.50;
+      compute();
+    });
+
+    el('printBtn').addEventListener('click', ()=> window.print());
+
+    shareLink.addEventListener('click', async (e)=>{
+      e.preventDefault();
+      const url = location.href;
+      try{ await navigator.clipboard.writeText(url); shareLink.textContent = 'Link copied'; setTimeout(()=>shareLink.textContent='Copy shareable link',1500);}catch{}
+    });
+
+    // Live listeners
+    [people,rpp,size,waterPerCup].forEach(x=> x.addEventListener('input', compute));
+
+    // Init
+    restore();
+    compute();
+  </script>
+</body>
+</html>
