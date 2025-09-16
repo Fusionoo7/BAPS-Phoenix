@@ -1,231 +1,275 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Puri Production Calculator</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Puri & Roti Calculator</title>
+  <link rel="icon" href="favicon.ico" />
   <style>
     :root{
-      --bg:#f5f0e6; /* light parchment background */
-      --card:#fffdf8;
-      --muted:#6b4e2e;
-      --accent:#c53030;
-      --accent-2:#b45309;
-      --text:#2d1f0b;
+      --bg:#0b1220;--panel:#131c2b;--muted:#95a3b8;--text:#e9eef7;--brand:#e63946;--brand-2:#eab308;--accent:#1f2a44;--ring:#2b3a57;
     }
+    html,body{height:100%}
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial}
-    .wrap{max-width:920px;margin:24px auto;padding:16px}
-    .header{display:flex;justify-content:center;margin-bottom:16px}
-    .header img{max-height:100px}
-    .card{background:var(--card);border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:20px;box-shadow:0 6px 18px rgba(0,0,0,.15)}
-    h1{font-size:clamp(22px,3.2vw,30px);margin:0 0 12px;letter-spacing:.2px;color:var(--accent)}
-    p.sub{margin:0 0 18px;color:var(--muted)}
-    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:16px}
-    .col-6{grid-column:span 6}
-    .col-12{grid-column:span 12}
-    @media (max-width:720px){.col-6{grid-column:span 12}}
-    label{display:block;font-weight:600;margin:6px 0;color:var(--accent-2)}
-    input, select{width:100%;padding:12px 12px;border-radius:12px;border:1px solid rgba(0,0,0,.14);background:#fff;color:var(--text);outline:none}
-    input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(197,48,48,.25)}
-    .card-ghost{background:#faf7f2;border:1px dashed rgba(0,0,0,.12);border-radius:14px;padding:14px}
-    .out{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;background:#fff9f5;border:1px solid rgba(0,0,0,.08)}
-    .out b{font-size:18px;color:var(--accent)}
-    .unit{color:var(--muted);font-size:13px;margin-left:6px}
-    .kpi{font-size:22px;letter-spacing:.3px}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    button{cursor:pointer;border:1px solid rgba(0,0,0,.14);background:linear-gradient(180deg,#fff8f5,#f5ece6);color:var(--text);padding:10px 14px;border-radius:12px}
-    button:hover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(197,48,48,.2)}
-    .pill{display:inline-block;padding:4px 8px;border-radius:999px;border:1px solid rgba(0,0,0,.12);background:#fff;font-size:12px;color:var(--muted)}
-    .fine{font-size:12px;color:var(--muted)}
-    .footer{margin-top:14px;display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .link{color:var(--accent);text-decoration:none}
-    .link:hover{text-decoration:underline}
+    body{margin:0;font:16px/1.45 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu; color:var(--text); background:radial-gradient(1200px 800px at 10% -10%, #1a2235 0%, transparent 60%),radial-gradient(1000px 700px at 100% 0%, #101827 0%, transparent 60%),var(--bg);}    
+    .wrap{max-width:1100px;margin:32px auto;padding:16px}
+    .logo{display:block;margin:0 auto 12px auto; height:80px;}
+    .card{background:var(--panel); border:1px solid var(--ring); border-radius:16px; padding:22px; box-shadow:0 8px 24px rgba(0,0,0,.25)}
+    h1{margin:8px 0 16px 0; font-size:34px; letter-spacing:.2px}
+    p.lead{color:var(--muted); margin-top:0}
+    .grid{display:grid; gap:16px}
+    @media(min-width:920px){.grid{grid-template-columns:1.1fr 1fr}}
+    label{display:block; margin:6px 0 6px 0; color:var(--muted)}
+    input,select{width:100%; padding:14px 12px; border-radius:12px; border:1px solid var(--ring); background:#0f1725; color:var(--text); outline:none}
+    input:focus,select:focus{border-color:#4f6bdc; box-shadow:0 0 0 4px rgba(79,107,220,.2)}
+    .kpi{background:#0f1725; border:1px solid var(--ring); border-radius:14px; padding:16px}
+    .kpi h3{margin:0 0 6px 0; font-size:14px; color:var(--muted)}
+    .kpi .val{font-size:26px; font-weight:700}
+    .row{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+    .btn{border:1px solid var(--ring); background:#0f1725; color:var(--text); padding:10px 14px; border-radius:10px; cursor:pointer}
+    .btn:hover{border-color:#6b86ff}
+    .pill{display:inline-block; padding:6px 10px; border-radius:999px; background:#0f1725; border:1px solid var(--ring); color:var(--muted); font-size:12px}
+
+    /* Tabs */
+    .tabs{display:flex; gap:10px; margin:12px 0 18px 0; flex-wrap:wrap}
+    .tab{padding:10px 14px; border-radius:999px; border:1px solid var(--ring); background:#0f1725; color:var(--text); cursor:pointer; user-select:none}
+    .tab.active{background:linear-gradient(90deg, var(--brand-2), var(--brand)); color:#0c0c0c; border-color:transparent; font-weight:700}
+    .view{display:none}
+    .view.active{display:block}
+
+    /* Freezer cards */
+    .fz{background:#0f1725; border:1px solid var(--ring); border-radius:12px; padding:10px}
+    .fz h4{margin:0 0 6px 0; font-size:14px; color:var(--brand-2)}
+    .fz .lvl{color:var(--muted); font-size:12px}
+    .fz textarea{width:100%; min-height:120px; border-radius:8px; border:1px solid var(--ring); background:#0b1420; color:var(--text); padding:8px}
   </style>
 </head>
 <body>
   <div class="wrap">
+    <!-- Top logo (replace src with your file name in repo) -->
+    <img class="logo" src="logo.png" alt="BAPS"/>
 
     <div class="card">
-      <h1>Puri Production Calculator</h1>
-      <p class="sub">Inputs on the left. Outputs update live. Share the URL to share the exact scenario.</p>
-      <div class="grid">
-        <div class="col-6">
-          <div class="card-ghost">
-            <label for="people">Number of people</label>
-            <input id="people" type="number" min="0" step="1" value="50" />
+      <h1>Puri & Roti Production</h1>
+      <p class="lead">Inputs on the left. Outputs update live. Use tabs to switch. Share the URL after setting values.</p>
 
-            <label for="rpp">Puris per person</label>
-            <input id="rpp" type="number" min="0" step="1" value="4" />
+      <div class="tabs">
+        <button class="tab" data-tab="calc">Puri calculator</button>
+        <button class="tab" data-tab="roti">Roti calculator</button>
+      </div>
 
-            <label for="size">Puri size</label>
-            <select id="size">
+      <!-- PURI VIEW -->
+      <section id="view-calc" class="view">
+        <div class="grid">
+          <div>
+            <label>Number of people</label>
+            <input id="p-people" type="number" min="0" step="1" value="50"/>
+
+            <label style="margin-top:10px">Puris per person</label>
+            <input id="p-per" type="number" min="0" step="1" value="4"/>
+
+            <label style="margin-top:10px">Puri size</label>
+            <select id="p-size">
               <option value="3.5">3.5 inch</option>
-              <option value="4">4.0 inch</option>
+              <option value="4" selected>4.0 inch</option>
             </select>
 
-            <div class="row" style="margin-top:12px">
-              <button id="copyBtn" title="Copy outputs">Copy results</button>
-              <button id="resetBtn" title="Reset to defaults">Reset</button>
-              <button id="printBtn" title="Print a pick list">Print</button>
+            <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+              <button class="btn" id="btn-copy">Copy results</button>
+              <button class="btn" id="btn-reset">Reset</button>
+              <button class="btn" id="btn-print">Print</button>
             </div>
+
+            <p style="margin-top:10px; color:var(--muted); font-size:13px">Assumptions: 3.5" → 53 puris/cup · 4" → 43 puris/cup · Oil = 16 oz / 250 puris · Salt = 1 spoon / 100 puris</p>
           </div>
 
-          <div class="fine" style="margin-top:10px">
-            Assumptions: 3.5" → 53 puris/cup · 4" → 43 puris/cup · Oil = 16 oz / 250 puris · Salt = 1 spoon / 100 puris
+          <div class="grid" style="grid-template-columns:1fr; gap:12px">
+            <div class="kpi"><h3>Total puris</h3><div class="val" id="p-total">0</div></div>
+            <div class="kpi"><h3>Flour needed</h3><div class="val"><span id="p-flour">0</span> <span class="pill">cups</span></div></div>
+            <div class="kpi"><h3>Oil needed</h3><div class="val"><span id="p-oil">0</span> <span class="pill">oz</span></div></div>
+            <div class="kpi"><h3>Salt needed</h3><div class="val"><span id="p-salt">0</span> <span class="pill">spoons</span></div></div>
+            <div class="kpi"><h3>Water needed</h3><div class="val"><span id="p-water-l">0</span> <span class="pill">liters</span></div></div>
+            <div><span class="pill" id="p-yield-pill">Yield</span></div>
           </div>
         </div>
+      </section>
 
-        <div class="col-6">
-          <div class="grid">
-            <div class="col-12 out"><span>Total puris</span><b class="kpi" id="o_total">0</b></div>
-            <div class="col-12 out"><span>Flour needed</span><b class="kpi" id="o_flour">0</b><span class="unit">cups</span></div>
-            <div class="col-12 out"><span>Oil needed</span><b class="kpi" id="o_oil">0</b><span class="unit">oz</span></div>
-            <div class="col-12 out"><span>Salt needed</span><b class="kpi" id="o_salt">0</b><span class="unit">spoons</span></div>
-            <div class="col-12 out"><span>Water needed</span><b class="kpi" id="o_water">0</b><span class="unit">L</span></div>
+      <!-- ROTI VIEW -->
+      <section id="view-roti" class="view">
+        <div class="grid">
+          <div>
+            <label>Number of people</label>
+            <input id="r-people" type="number" min="0" step="1" value="50"/>
+
+            <label style="margin-top:10px">Rotis per person</label>
+            <input id="r-per" type="number" min="0" step="1" value="3"/>
+
+            <label style="margin-top:10px">Rotis per cup of flour</label>
+            <input id="r-yield" type="number" min="1" step="1" value="12"/>
+
+            <div style="margin-top:12px; display:flex; gap:10px; flex-wrap:wrap">
+              <button class="btn" id="r-btn-copy">Copy results</button>
+              <button class="btn" id="r-btn-reset">Reset</button>
+            </div>
+
+            <p style="margin-top:10px; color:var(--muted); font-size:13px">Defaults: yield 12 rotis/cup · Salt = 1 spoon / 100 rotis. No frying oil assumed.</p>
           </div>
 
-          <div class="footer">
-            <span class="pill" id="yieldPill">Yield: 53 puris/cup</span>
-            <a class="link" href="#" id="shareLink">Copy shareable link</a>
+          <div class="grid" style="grid-template-columns:1fr; gap:12px">
+            <div class="kpi"><h3>Total rotis</h3><div class="val" id="r-total">0</div></div>
+            <div class="kpi"><h3>Flour needed</h3><div class="val"><span id="r-flour">0</span> <span class="pill">cups</span></div></div>
+            <div class="kpi"><h3>Salt needed</h3><div class="val"><span id="r-salt">0</span> <span class="pill">spoons</span></div></div>
+            <div class="kpi"><h3>Water needed</h3><div class="val"><span id="r-water-l">0</span> <span class="pill">liters</span></div></div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <p style="margin-top:18px; color:var(--muted); font-size:12px">Bookmark after changing inputs. Works offline after first load.</p>
     </div>
-
-    <div class="fine" style="margin-top:12px">Tip: Bookmark after changing inputs. The URL stores values. Works offline after first load.</div>
   </div>
 
-  <script>
-    // Constants
-    const YIELD_3_5 = 53; // puris per cup
-    const YIELD_4_0 = 43; // puris per cup
-    const OIL_PER_PURi_OZ = 16/250; // 0.064 oz per puri
-    const SALT_PER_PURi_SPOON = 1/100; // 0.01 spoon per puri
+<script>
+  // ===== CONSTANTS =====
+  const CUP_TO_LITER = 0.24;
+  const OIL_PER_PURI_OZ = 16/250;  // 0.064 oz per puri
+  const SALT_PER_100 = 1;          // 1 spoon per 100 puris/rotis
+  const WATER_PER_FLOUR_CUP_PURIS = 0.50; // cups water per flour cup (puri)
+  const WATER_PER_FLOUR_CUP_ROTI  = 0.60; // cups water per flour cup (roti)
 
-// >>> WATER CALIBRATION <<<
-// Change this single value to adjust your dough water.
-// Example: 0.50 means 0.5 cups water per 1 cup flour.
-const WATER_PER_FLOUR_CUP = 0.50;
-// ^^^ edit this when you calibrate ^^^
+  // ===== HELPERS =====
+  const $ = s=>document.querySelector(s);
+  const $$ = s=>Array.from(document.querySelectorAll(s));
+  const store = (k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const load  = (k,d)=>{try{const v=JSON.parse(localStorage.getItem(k));return v??d;}catch{return d}}
+  const round = (n,d=2)=>{const f=10**d; return Math.round(n*f)/f}
+  function setVal(sel, v){ const el=$(sel); if(!el) return; el.textContent = Number.isFinite(v)? v.toLocaleString(undefined,{maximumFractionDigits:2}) : String(v); }
 
-    // Elements
-    const el = id => document.getElementById(id);
-    const people = el('people');
-    const rpp = el('rpp');
-    const size = el('size');
-    const o_total = el('o_total');
-    const o_flour = el('o_flour');
-    const o_oil = el('o_oil');
-    const o_salt = el('o_salt');
-    const o_water = el('o_water');
-const shareLink = el('shareLink');
+  // ===== PURE CALC FUNCTIONS (testable) =====
+  function calcPuri(totalPuris, sizeInch){
+    const yieldCup = (String(sizeInch)==='3.5')?53:43;
+    const flour = totalPuris / yieldCup;
+    const oil = totalPuris * OIL_PER_PURI_OZ;
+    const salt = (totalPuris/100) * SALT_PER_100;
+    const waterL = flour * WATER_PER_FLOUR_CUP_PURIS * CUP_TO_LITER;
+    return {yieldCup, flour, oil, salt, waterL};
+  }
+  function calcRoti(totalRotis, rotisPerCup){
+    const y = Math.max(1, Number(rotisPerCup)||12);
+    const flour = totalRotis / y;
+    const salt = (totalRotis/100) * SALT_PER_100;
+    const waterL = flour * WATER_PER_FLOUR_CUP_ROTI * CUP_TO_LITER;
+    return {yieldCup:y, flour, salt, waterL};
+  }
 
-    // Utils
-    const clamp = (v,min,max)=>Math.min(Math.max(v,min),max);
-    const toNum = (v, def=0)=>{const n = Number(v); return Number.isFinite(n)?n:def};
-    const fmt0 = n => (Math.round(n)).toString();
-    const fmt1 = n => (Math.round(n*10)/10).toFixed(1);
-    const fmt2 = n => (Math.round(n*100)/100).toFixed(2);
+  // ===== RENDERERS =====
+  function renderPuri(){
+    const people = Number($('#p-people').value||0);
+    const per    = Number($('#p-per').value||0);
+    const size   = $('#p-size').value;
+    const total  = people * per;
+    const r = calcPuri(total, size);
+    setVal('#p-total', total);
+    setVal('#p-flour', round(r.flour,2));
+    setVal('#p-oil', round(r.oil,1));
+    setVal('#p-salt', round(r.salt,1));
+    setVal('#p-water-l', round(r.waterL,2));
+    $('#p-yield-pill').textContent = `Yield: ${r.yieldCup} puris/cup`;
+  }
+  function renderRoti(){
+    const people = Number($('#r-people').value||0);
+    const per    = Number($('#r-per').value||0);
+    const yld    = Number($('#r-yield').value||12);
+    const total  = people * per;
+    const r = calcRoti(total, yld);
+    setVal('#r-total', total);
+    setVal('#r-flour', round(r.flour,2));
+    setVal('#r-salt', round(r.salt,1));
+    setVal('#r-water-l', round(r.waterL,2));
+  }
 
-    function currentYield(){
-      return size.value === '3.5' ? YIELD_3_5 : YIELD_4_0;
-    }
+  // ===== RECOMPUTE (fix for earlier ReferenceError) =====
+  function recompute(){
+    renderPuri();
+    renderRoti();
+  }
 
-    function compute(){
-      const P = clamp(Math.floor(toNum(people.value,0)),0,1_000_000);
-      const R = clamp(Math.floor(toNum(rpp.value,0)),0,10_000);
-      const total = P * R;
-      const y = currentYield();
-      const cupsFlour = total / y;
-      const oilOz = total * OIL_PER_PURi_OZ;
-      const saltSpoons = total * SALT_PER_PURi_SPOON;
-      const waterCups = cupsFlour * WATER_PER_FLOUR_CUP;
-      const waterLiters = waterCups * 0.24; // 1 US cup ≈ 0.24 L
+  // ===== TABS =====
+  const tabMap = {calc:'view-calc', roti:'view-roti'};
+  function setTab(t){
+    Object.entries(tabMap).forEach(([k,v])=>{
+      document.getElementById(v).classList.toggle('active', k===t);
+      document.querySelector(`.tab[data-tab="${k}"]`).classList.toggle('active', k===t);
+    });
+    const url = new URL(location);
+    url.searchParams.set('t', t);
+    history.replaceState(null,'',url);
+    store('activeTab', t);
+    recompute();
+  }
+  $$('.tab').forEach(b=> b.addEventListener('click', ()=> setTab(b.dataset.tab)));
 
-      // Render
-      o_total.textContent = fmt0(total);
-      o_flour.textContent = fmt2(cupsFlour);
-      o_oil.textContent = fmt1(oilOz);
-      o_salt.textContent = fmt1(saltSpoons);
-      o_water.textContent = fmt2(waterLiters);
-      yieldPill.textContent = `Yield: ${y} puris/cup`;
+  // (freezer inventory removed at user request)
 
-      persist();
-      updateURL();
-    }
-
-    function persist(){
-      const data = {
-        people: people.value,
-        rpp: rpp.value,
-        size: size.value,
-        };
-      localStorage.setItem('puriCalc', JSON.stringify(data));
-    }
-
-    function restore(){
-      // 1) URL params override
-      const sp = new URLSearchParams(location.search);
-      const q = (k,d)=> sp.get(k) ?? d;
-      const hasParams = sp.has('p')||sp.has('r')||sp.has('s');
-      if(hasParams){
-        people.value = q('p', people.value);
-        rpp.value = q('r', rpp.value);
-        size.value = q('s', size.value);
-        return;
+  // ===== WIRING: INPUTS → STATE → RECOMPUTE =====
+  ['#p-people','#p-per','#p-size','#r-people','#r-per','#r-yield'].forEach(sel=>{
+    const el=$(sel); if(!el) return;
+    el.addEventListener('input', ()=>{
+      // Persist puri/roti inputs separately
+      if(sel.startsWith('#p-')){
+        store('p.people', Number($('#p-people').value||0));
+        store('p.per',    Number($('#p-per').value||0));
+        store('p.size',   $('#p-size').value);
+      } else if(sel.startsWith('#r-')){
+        store('r.people', Number($('#r-people').value||0));
+        store('r.per',    Number($('#r-per').value||0));
+        store('r.yield',  Number($('#r-yield').value||12));
       }
-      // 2) Local storage fallback
-      const raw = localStorage.getItem('puriCalc');
-      if(!raw) return;
-      try{
-        const data = JSON.parse(raw);
-        if(data.people) people.value = data.people;
-        if(data.rpp) rpp.value = data.rpp;
-        if(data.size) size.value = data.size;
-        }catch{}
-    }
-
-    function updateURL(){
-      const u = new URL(location.href);
-      u.searchParams.set('p', people.value);
-      u.searchParams.set('r', rpp.value);
-      u.searchParams.set('s', size.value);
-      history.replaceState(null, '', u);
-    }
-
-    // Actions
-    el('copyBtn').addEventListener('click', async ()=>{
-      const lines = [
-        `Total puris: ${o_total.textContent}`,
-        `Flour: ${o_flour.textContent} cups`,
-        `Oil: ${o_oil.textContent} oz`,
-        `Salt: ${o_salt.textContent} spoons`,
-        `Water: ${o_water.textContent} L`,
-      ];
-      const text = lines.join('\n');
-      try{ await navigator.clipboard.writeText(text);}catch{}
+      recompute();
     });
+  });
 
-    el('resetBtn').addEventListener('click', ()=>{
-      people.value = 50; rpp.value = 4; size.value = '3.5';
-      compute();
-    });
+  // Buttons
+  $('#btn-copy').onclick   = ()=> navigator.clipboard.writeText(location.href);
+  $('#r-btn-copy').onclick = ()=> navigator.clipboard.writeText(location.href);
+  $('#btn-print').onclick  = ()=> window.print();
+  $('#btn-reset').onclick  = ()=>{ $('#p-people').value=50; $('#p-per').value=4; $('#p-size').value='4'; recompute(); }
+  $('#r-btn-reset').onclick= ()=>{ $('#r-people').value=50; $('#r-per').value=3; $('#r-yield').value=12; recompute(); }
 
-    el('printBtn').addEventListener('click', ()=> window.print());
+  // ===== INIT =====
+  (function init(){
+    // Restore inputs from storage if present
+    const pp=load('p.people', null); if(pp!==null) $('#p-people').value=pp;
+    const pr=load('p.per', null);    if(pr!==null) $('#p-per').value=pr;
+    const ps=load('p.size', null);   if(ps!==null) $('#p-size').value=ps;
+    const rp=load('r.people', null); if(rp!==null) $('#r-people').value=rp;
+    const rr=load('r.per', null);    if(rr!==null) $('#r-per').value=rr;
+    const ry=load('r.yield', null);  if(ry!==null) $('#r-yield').value=ry;
 
-    shareLink.addEventListener('click', async (e)=>{
-      e.preventDefault();
-      const url = location.href;
-      try{ await navigator.clipboard.writeText(url); shareLink.textContent = 'Link copied'; setTimeout(()=>shareLink.textContent='Copy shareable link',1500);}catch{}
-    });
+    // Activate tab from URL or storage
+    const url = new URL(location);
+    const t = url.searchParams.get('t') || load('activeTab','calc');
+    setTab(['calc','roti'].includes(t)?t:'calc');
 
-    // Live listeners
-    [people,rpp,size].forEach(x=> x.addEventListener('input', compute));
+    // Initial compute for visible values
+    recompute();
+  })();
 
-    // Init
-    restore();
-    compute();
-  </script>
+  // ===== SELF-TESTS (console) =====
+  (function selfTests(){
+    function approx(a,b,t=1e-6){return Math.abs(a-b)<=t}
+    try{
+      // Regex newline split
+      console.assert('a\nb'.split(/\n+/).length===2, 'newline split');
+      // Puri calc sanity: 10 people * 5 puris, size 4"
+      const total=50; const r = calcPuri(total,'4');
+      console.assert(approx(r.yieldCup,43), 'yield 4" = 43');
+      console.assert(approx(round(r.flour,4), round(total/43,4)), 'flour matches');
+      console.assert(approx(round(r.oil,4), round(total*(16/250),4)), 'oil matches');
+      console.assert(approx(round(r.salt,4), round((total/100)*1,4)), 'salt matches');
+      console.assert(approx(round(r.waterL,4), round((total/43)*0.50*0.24,4)), 'water L matches');
+      console.log('Self-tests passed');
+    }catch(e){ console.error('Self-tests failed', e); }
+  })();
+</script>
 </body>
 </html>
