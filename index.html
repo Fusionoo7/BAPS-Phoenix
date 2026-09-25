@@ -359,13 +359,12 @@
     const WATER_PER_FLOUR_CUP_ROTI = 0.60;
     // Output unit conversion. Each table maps unit -> amount of that unit per 1 base unit.
     // Weight conversions for flour/oil/salt depend on these density assumptions.
-    const FLOUR_G_PER_CUP = 120;   // atta / whole-wheat flour, spooned & leveled
     const OIL_G_PER_ML = 0.92;
     const SPOON_TO_TSP = 1;        // "spoon" in the assumptions = 1 teaspoon
     const SALT_G_PER_TSP = 6;      // fine table salt
     const FLOZ_TO_ML = FLOZ_TO_LITER * 1000;
     const OUTPUT_UNITS = {
-      flour: { def: 'cups', units: { cups: 1, g: FLOUR_G_PER_CUP, kg: FLOUR_G_PER_CUP / 1000, lbs: FLOUR_G_PER_CUP / 453.592, 'oz (wt)': FLOUR_G_PER_CUP / 28.3495 } },
+      flour: { def: 'lbs', units: { lbs: 1, kg: 0.453592, g: 453.592, oz: 16 } },  // 1 measured cup = 1 lb
       oil: { def: 'fl oz', units: { 'fl oz': 1, ml: FLOZ_TO_ML, L: FLOZ_TO_LITER, cups: FLOZ_TO_LITER / CUP_TO_LITER, tbsp: 2, gal: 1 / 128, g: FLOZ_TO_ML * OIL_G_PER_ML, kg: FLOZ_TO_ML * OIL_G_PER_ML / 1000, lbs: FLOZ_TO_ML * OIL_G_PER_ML / 453.592 } },
       salt: { def: 'spoons', units: { spoons: 1, tsp: SPOON_TO_TSP, tbsp: SPOON_TO_TSP / 3, g: SPOON_TO_TSP * SALT_G_PER_TSP, kg: SPOON_TO_TSP * SALT_G_PER_TSP / 1000 } },
       water: { def: 'L', units: { L: 1, ml: 1000, 'fl oz': 1 / FLOZ_TO_LITER, cups: 1 / CUP_TO_LITER, gal: 1 / 3.78541, kg: 1 } }
