@@ -132,6 +132,18 @@
       font-size: 12px
     }
 
+    select.unit-sel {
+      width: auto;
+      padding: 6px 10px;
+      margin-left: 4px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--muted);
+      vertical-align: middle;
+      cursor: pointer
+    }
+
     .tabs {
       display: flex;
       gap: 10px;
@@ -236,7 +248,7 @@
               <button class="btn" id="btn-print">Print</button>
             </div>
             <p class="lead" style="font-size:13px">Assumptions: 3.5" → 53 puris/cup · 4" → 43 puris/cup · Oil = 16 oz /
-              250 puris · Salt = 1 spoon / 100 puris</p>
+              250 puris · Salt = 1 spoon / 100 puris · Water = 200 oz / 400 puris</p>
           </div>
           <div class="grid" style="grid-template-columns:1fr;gap:12px">
             <div class="kpi">
@@ -245,19 +257,19 @@
             </div>
             <div class="kpi">
               <h3>Flour needed</h3>
-              <div class="val"><span id="p-flour">0</span> <span class="pill">lbs</span></div>
+              <div class="val"><span id="p-flour">0</span> <select class="unit-sel" id="p-flour-unit" data-kind="flour" aria-label="Flour unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Oil needed</h3>
-              <div class="val"><span id="p-oil">0</span> <span class="pill">oz</span></div>
+              <div class="val"><span id="p-oil">0</span> <select class="unit-sel" id="p-oil-unit" data-kind="oil" aria-label="Oil unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Salt needed</h3>
-              <div class="val"><span id="p-salt">0</span> <span class="pill">spoons</span></div>
+              <div class="val"><span id="p-salt">0</span> <select class="unit-sel" id="p-salt-unit" data-kind="salt" aria-label="Salt unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Water needed</h3>
-              <div class="val"><span id="p-water-l">0</span> <span class="pill">liters</span></div>
+              <div class="val"><span id="p-water-l">0</span> <select class="unit-sel" id="p-water-unit" data-kind="water" aria-label="Water unit"></select></div>
             </div>
             <div><span class="pill" id="p-yield-pill">Yield</span></div>
           </div>
@@ -286,15 +298,15 @@
             </div>
             <div class="kpi">
               <h3>Flour needed</h3>
-              <div class="val"><span id="r-flour">0</span> <span class="pill">lbs</span></div>
+              <div class="val"><span id="r-flour">0</span> <select class="unit-sel" id="r-flour-unit" data-kind="flour" aria-label="Flour unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Salt needed</h3>
-              <div class="val"><span id="r-salt">0</span> <span class="pill">spoons</span></div>
+              <div class="val"><span id="r-salt">0</span> <select class="unit-sel" id="r-salt-unit" data-kind="salt" aria-label="Salt unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Water needed</h3>
-              <div class="val"><span id="r-water-l">0</span> <span class="pill">liters</span></div>
+              <div class="val"><span id="r-water-l">0</span> <select class="unit-sel" id="r-water-unit" data-kind="water" aria-label="Water unit"></select></div>
             </div>
           </div>
         </div>
@@ -342,8 +354,22 @@
     const CUP_TO_LITER = 0.24;
     const OIL_PER_PURI_OZ = 6 / 250;
     const SALT_PER_100 = 1;
-    const WATER_PER_FLOUR_CUP_PURIS = 0.50;
+    const FLOZ_TO_LITER = 0.0295735;
+    const WATER_PER_PURI_OZ = 200 / 400;
     const WATER_PER_FLOUR_CUP_ROTI = 0.60;
+    // Output unit conversion. Each table maps unit -> amount of that unit per 1 base unit.
+    // Weight conversions for flour/oil/salt depend on these density assumptions.
+    const FLOUR_G_PER_CUP = 120;   // atta / whole-wheat flour, spooned & leveled
+    const OIL_G_PER_ML = 0.92;
+    const SPOON_TO_TSP = 1;        // "spoon" in the assumptions = 1 teaspoon
+    const SALT_G_PER_TSP = 6;      // fine table salt
+    const FLOZ_TO_ML = FLOZ_TO_LITER * 1000;
+    const OUTPUT_UNITS = {
+      flour: { def: 'cups', units: { cups: 1, g: FLOUR_G_PER_CUP, kg: FLOUR_G_PER_CUP / 1000, lbs: FLOUR_G_PER_CUP / 453.592, 'oz (wt)': FLOUR_G_PER_CUP / 28.3495 } },
+      oil: { def: 'fl oz', units: { 'fl oz': 1, ml: FLOZ_TO_ML, L: FLOZ_TO_LITER, cups: FLOZ_TO_LITER / CUP_TO_LITER, tbsp: 2, gal: 1 / 128, g: FLOZ_TO_ML * OIL_G_PER_ML, kg: FLOZ_TO_ML * OIL_G_PER_ML / 1000, lbs: FLOZ_TO_ML * OIL_G_PER_ML / 453.592 } },
+      salt: { def: 'spoons', units: { spoons: 1, tsp: SPOON_TO_TSP, tbsp: SPOON_TO_TSP / 3, g: SPOON_TO_TSP * SALT_G_PER_TSP, kg: SPOON_TO_TSP * SALT_G_PER_TSP / 1000 } },
+      water: { def: 'L', units: { L: 1, ml: 1000, 'fl oz': 1 / FLOZ_TO_LITER, cups: 1 / CUP_TO_LITER, gal: 1 / 3.78541, kg: 1 } }
+    };
     const UNITS = ['g', 'kg', 'mg', 'lb', 'oz', 'ml', 'L', 'tsp', 'tbsp', 'cup', 'piece', 'pack', 'tray'];
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
@@ -351,11 +377,13 @@
     const load = (k, d) => { try { const v = JSON.parse(localStorage.getItem(k)); return v ?? d; } catch { return d } };
     const round = (n, d = 2) => { const f = 10 ** d; return Math.round(n * f) / f };
     function setVal(sel, v) { const el = $(sel); if (!el) return; el.textContent = Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v) }
+    function initUnitSelects() { $$('select.unit-sel').forEach(sel => { const t = OUTPUT_UNITS[sel.dataset.kind]; Object.keys(t.units).forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; sel.appendChild(o) }); const saved = load('unit.' + sel.id, t.def); sel.value = (saved in t.units) ? saved : t.def; sel.addEventListener('change', () => { store('unit.' + sel.id, sel.value); recompute() }) }) }
+    function setQty(valSel, unitSel, baseAmt) { const u = $(unitSel); const t = OUTPUT_UNITS[u.dataset.kind]; const f = t.units[u.value] ?? 1; const v = baseAmt * f; setVal(valSel, round(v, Math.abs(v) >= 100 ? 0 : 2)) }
     async function copyText(text) { function fb() { try { const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-9999px'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); return ok } catch { return false } } try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true } return fb() } catch { return fb() } }
-    function calcPuri(total, sizeInch) { const y = (String(sizeInch) === '3.5') ? 50 : 40; const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_PURI_OZ, salt: (total / 100) * SALT_PER_100, waterL: flour * WATER_PER_FLOUR_CUP_PURIS * CUP_TO_LITER } }
+    function calcPuri(total, sizeInch) { const y = (String(sizeInch) === '3.5') ? 50 : 40; const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_PURI_OZ, salt: (total / 100) * SALT_PER_100, waterL: total * WATER_PER_PURI_OZ * FLOZ_TO_LITER } }
     function calcRoti(total, yieldPerCup) { const y = Math.max(1, Number(yieldPerCup) || 12); const flour = total / y; return { yieldCup: y, flour, salt: (total / 100) * SALT_PER_100, waterL: flour * WATER_PER_FLOUR_CUP_ROTI * CUP_TO_LITER } }
-    function renderPuri() { const ppl = Number($('#p-people').value || 0); const per = Number($('#p-per').value || 0); const size = $('#p-size').value; const total = ppl * per; const r = calcPuri(total, size); setVal('#p-total', total); setVal('#p-flour', round(r.flour, 2)); setVal('#p-oil', round(r.oil, 1)); setVal('#p-salt', round(r.salt, 1)); setVal('#p-water-l', round(r.waterL, 2)); $('#p-yield-pill').textContent = `Yield: ${r.yieldCup} puris/cup` }
-    function renderRoti() { const ppl = Number($('#r-people').value || 0); const per = Number($('#r-per').value || 0); const yld = Number($('#r-yield').value || 12); const total = ppl * per; const r = calcRoti(total, yld); setVal('#r-total', total); setVal('#r-flour', round(r.flour, 2)); setVal('#r-salt', round(r.salt, 1)); setVal('#r-water-l', round(r.waterL, 2)) }
+    function renderPuri() { const ppl = Number($('#p-people').value || 0); const per = Number($('#p-per').value || 0); const size = $('#p-size').value; const total = ppl * per; const r = calcPuri(total, size); setVal('#p-total', total); setQty('#p-flour', '#p-flour-unit', r.flour); setQty('#p-oil', '#p-oil-unit', r.oil); setQty('#p-salt', '#p-salt-unit', r.salt); setQty('#p-water-l', '#p-water-unit', r.waterL); $('#p-yield-pill').textContent = `Yield: ${r.yieldCup} puris/cup` }
+    function renderRoti() { const ppl = Number($('#r-people').value || 0); const per = Number($('#r-per').value || 0); const yld = Number($('#r-yield').value || 12); const total = ppl * per; const r = calcRoti(total, yld); setVal('#r-total', total); setQty('#r-flour', '#r-flour-unit', r.flour); setQty('#r-salt', '#r-salt-unit', r.salt); setQty('#r-water-l', '#r-water-unit', r.waterL) }
     function recompute() { renderPuri(); renderRoti(); if ($('#view-mult').classList.contains('active')) updateScaledAll() }
     const tabMap = { calc: 'view-calc', roti: 'view-roti', mult: 'view-mult' };
     function setTab(t) { Object.entries(tabMap).forEach(([k, v]) => { document.getElementById(v).classList.toggle('active', k === t); document.querySelector(`.tab[data-tab="${k}"]`).classList.toggle('active', k === t) }); const url = new URL(location); url.searchParams.set('t', t); history.replaceState(null, '', url); store('activeTab', t); recompute() }
@@ -381,7 +409,7 @@
     mExport && mExport.addEventListener('click', () => { const f = factor(); const csvRows = [["Ingredient", "Base amount", "Unit", "Scaled amount"]].concat(rows.map(r => [r.name, r.amt, r.unit, (r.amt * f).toFixed(2)])); const csv = csvRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'recipe_multiplier.csv'; a.click(); URL.revokeObjectURL(a.href) });
     mBase && mBase.addEventListener('input', () => { saveRows(rows); updateScaledAll() });
     mTarget && mTarget.addEventListener('input', () => { saveRows(rows); updateScaledAll() });
-    (function init() { const pp = load('p.people', null); if (pp !== null) $('#p-people').value = pp; const pr = load('p.per', null); if (pr !== null) $('#p-per').value = pr; const ps = load('p.size', null); if (ps !== null) $('#p-size').value = ps; const rp = load('r.people', null); if (rp !== null) $('#r-people').value = rp; const rr = load('r.per', null); if (rr !== null) $('#r-per').value = rr; const ry = load('r.yield', null); if (ry !== null) $('#r-yield').value = ry; renderAllRows(); const t = (new URL(location)).searchParams.get('t') || load('activeTab', 'calc'); setTab(['calc', 'roti', 'mult'].includes(t) ? t : 'calc'); recompute() })();
+    (function init() { initUnitSelects(); const pp = load('p.people', null); if (pp !== null) $('#p-people').value = pp; const pr = load('p.per', null); if (pr !== null) $('#p-per').value = pr; const ps = load('p.size', null); if (ps !== null) $('#p-size').value = ps; const rp = load('r.people', null); if (rp !== null) $('#r-people').value = rp; const rr = load('r.per', null); if (rr !== null) $('#r-per').value = rr; const ry = load('r.yield', null); if (ry !== null) $('#r-yield').value = ry; renderAllRows(); const t = (new URL(location)).searchParams.get('t') || load('activeTab', 'calc'); setTab(['calc', 'roti', 'mult'].includes(t) ? t : 'calc'); recompute() })();
   </script>
 </body>
 
