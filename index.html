@@ -243,6 +243,7 @@
               <option value="4" selected>4.0 inch</option>
             </select>
             <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" id="btn-share">Share</button>
               <button class="btn" id="btn-copy">Copy link</button>
               <button class="btn" id="btn-reset">Reset</button>
               <button class="btn" id="btn-print">Print</button>
@@ -281,6 +282,7 @@
             <label style="margin-top:10px">Rotis per person</label>
             <input id="r-per" type="number" min="0" step="1" value="3" />
             <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn" id="r-btn-share">Share</button>
               <button class="btn" id="r-btn-copy">Copy link</button>
               <button class="btn" id="r-btn-reset">Reset</button>
             </div>
@@ -343,6 +345,7 @@
           <button class="btn" id="m-add">Add row</button>
           <button class="btn" id="m-clear">Clear all</button>
           <button class="btn" id="m-copy">Copy list</button>
+          <button class="btn" id="m-share">Share</button>
           <button class="btn" id="m-export">Export CSV</button>
         </div>
       </section>
@@ -373,7 +376,27 @@
       salt: { def: 'spoons', units: { spoons: 1, tsp: SPOON_TO_TSP, tbsp: SPOON_TO_TSP / 3, g: SPOON_TO_TSP * SALT_G_PER_TSP, kg: SPOON_TO_TSP * SALT_G_PER_TSP / 1000 } },
       water: { def: 'L', units: { L: 1, ml: 1000, 'fl oz': 1 / FLOZ_TO_LITER, cups: 1 / CUP_TO_LITER, gal: 1 / 3.78541, kg: 1 } }
     };
-    const UNITS = ['g', 'kg', 'mg', 'lb', 'oz', 'ml', 'L', 'tsp', 'tbsp', 'cup', 'piece', 'pack', 'tray'];
+    // Recipe multiplier units: each group converts within itself (factor = size in the group's base unit).
+    // Count units (piece/pack/tray) never convert.
+    const UNIT_GROUPS = {
+      Weight: { mg: 0.001, g: 1, kg: 1000, oz: 28.3495, lb: 453.592 },
+      Volume: { ml: 1, L: 1000, tsp: 4.92892, tbsp: 14.7868, 'fl oz': FLOZ_TO_ML, cup: CUP_TO_LITER * 1000, gal: 3785.41 },
+      Count: { piece: 1, pack: 1, tray: 1 }
+    };
+    // Volume <-> weight needs the ingredient's density (g/ml), matched from the ingredient name.
+    // First match wins, so specific names come before generic ones. Unknown ingredients convert only within weight or volume.
+    const DENSITIES = [
+      [/besan|gram flour|chickpea flour/i, 0.39], [/rice flour/i, 0.53], [/flour|atta|maida/i, 0.51],
+      [/sooji|suji|semolina|rava/i, 0.70], [/rice/i, 0.78], [/powdered sugar|icing sugar/i, 0.51], [/brown sugar/i, 0.93], [/sugar/i, 0.85],
+      [/baking soda/i, 0.92], [/baking powder/i, 0.81], [/salt/i, 1.22], [/ghee/i, 0.91], [/butter/i, 0.96], [/oil/i, 0.92],
+      [/honey/i, 1.42], [/yogurt|yoghurt|curd|dahi/i, 1.03], [/cream/i, 1.00], [/milk/i, 1.03], [/water/i, 1.00]
+    ];
+    const densityOf = name => (DENSITIES.find(([re]) => re.test(name || '')) || [])[1];
+    const groupOf = u => Object.keys(UNIT_GROUPS).find(g => u in UNIT_GROUPS[g]) || 'Count';
+    function outGroups(r) { const g = groupOf(r.unit); if (g === 'Count') return ['Count']; return densityOf(r.name) ? ['Weight', 'Volume'] : [g] }
+    function convertUnit(v, from, to, density) { const gf = groupOf(from), gt = groupOf(to); if (gf === 'Count' || from === to) return v; if (gf !== gt && !density) return v; let base = v * UNIT_GROUPS[gf][from]; if (gf === 'Volume' && gt === 'Weight') base *= density; if (gf === 'Weight' && gt === 'Volume') base /= density; return base / UNIT_GROUPS[gt][to] }
+    function unitSelect(value, groups) { const sel = document.createElement('select'); Object.entries(UNIT_GROUPS).forEach(([g, units]) => { if (groups && !groups.includes(g)) return; const og = document.createElement('optgroup'); og.label = g; Object.keys(units).forEach(u => { if (groups && g === 'Count' && u !== value) return; const o = document.createElement('option'); o.value = u; o.textContent = u; og.appendChild(o) }); sel.appendChild(og) }); sel.value = value; return sel }
+    const fmt = v => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
     const $ = s => document.querySelector(s);
     const $$ = s => Array.from(document.querySelectorAll(s));
     const store = (k, v) => localStorage.setItem(k, JSON.stringify(v));
@@ -396,8 +419,14 @@
     function saveInputs() { const url = new URL(location); Object.entries(INPUTS).forEach(([id, [param, key]]) => { const v = document.getElementById(id).value; store(key, v); url.searchParams.set(param, v) }); history.replaceState(null, '', url) }
     function loadInputs() { const q = new URL(location).searchParams; Object.entries(INPUTS).forEach(([id, [param, key]]) => { const v = q.get(param) ?? load(key, null); if (v !== null && v !== '') document.getElementById(id).value = v }) }
     Object.keys(INPUTS).forEach(id => document.getElementById(id).addEventListener('input', () => { saveInputs(); recompute() }));
-    $('#btn-copy') && ($('#btn-copy').onclick = () => copyText(location.href));
-    $('#r-btn-copy') && ($('#r-btn-copy').onclick = () => copyText(location.href));
+    function flash(btn, msg) { const t = btn.dataset.label || (btn.dataset.label = btn.textContent); btn.textContent = msg; clearTimeout(btn._t); btn._t = setTimeout(() => btn.textContent = t, 1500) }
+    // Share via the phone's share sheet when available; otherwise copy the text to the clipboard.
+    async function shareOut(btn, title, text, withLink = true) { const url = withLink ? location.href : undefined; if (navigator.share) { try { await navigator.share({ title, text, url }); return } catch (e) { if (e.name === 'AbortError') return } } flash(btn, await copyText([title, text, url].filter(Boolean).join('\n')) ? 'Copied!' : 'Copy failed') }
+    const qty = id => `${$('#' + id).textContent} ${$('#' + id).nextElementSibling.value}`;
+    $('#btn-share').onclick = () => shareOut($('#btn-share'), `Puris: ${$('#p-total').textContent} (${$('#p-size').value}")`, `Flour: ${qty('p-flour')}\nOil: ${qty('p-oil')}\nSalt: ${qty('p-salt')}\nWater: ${qty('p-water-l')}`);
+    $('#r-btn-share').onclick = () => shareOut($('#r-btn-share'), `Rotis: ${$('#r-total').textContent}`, `Flour: ${qty('r-flour')}\nOil: ${qty('r-oil')}\nSalt: ${qty('r-salt')}\nWater: ${qty('r-water-l')}`);
+    $('#btn-copy').onclick = async () => flash($('#btn-copy'), await copyText(location.href) ? 'Copied!' : 'Copy failed');
+    $('#r-btn-copy').onclick = async () => flash($('#r-btn-copy'), await copyText(location.href) ? 'Copied!' : 'Copy failed');
     $('#btn-print') && ($('#btn-print').onclick = () => window.print());
     $('#btn-reset') && ($('#btn-reset').onclick = () => { $('#p-people').value = 50; $('#p-per').value = 4; $('#p-size').value = '4'; saveInputs(); recompute() });
     $('#r-btn-reset') && ($('#r-btn-reset').onclick = () => { $('#r-people').value = 50; $('#r-per').value = 3; saveInputs(); recompute() });
@@ -406,14 +435,29 @@
     function factor() { const b = Math.max(1, Number(mBase?.value) || 1); const t = Math.max(1, Number(mTarget?.value) || 1); return t / b }
     function loadRows() { try { return JSON.parse(localStorage.getItem('m.rows')) || [] } catch { return [] } }
     function saveRows(rows) { localStorage.setItem('m.rows', JSON.stringify(rows)) }
-    let rows = loadRows().map((r, i) => ({ id: r.id ?? ('r' + i + Date.now()), name: r.name || '', amt: Number(r.amt) || 0, unit: r.unit || 'g' }));
-    function renderAllRows() { mTbody.innerHTML = ''; rows.forEach((row, idx) => { const tr = document.createElement('tr'); const tdName = document.createElement('td'); const inpName = document.createElement('input'); inpName.type = 'text'; inpName.value = row.name; inpName.placeholder = 'e.g., Wheat flour'; inpName.addEventListener('input', e => { rows[idx].name = e.target.value; saveRows(rows) }); tdName.appendChild(inpName); const tdAmt = document.createElement('td'); const inpAmt = document.createElement('input'); inpAmt.type = 'number'; inpAmt.step = 'any'; inpAmt.min = '0'; inpAmt.value = row.amt; inpAmt.addEventListener('input', e => { rows[idx].amt = Number(e.target.value || 0); saveRows(rows); updateScaled(idx) }); tdAmt.appendChild(inpAmt); const tdUnit = document.createElement('td'); const sel = document.createElement('select'); UNITS.forEach(u => { const o = document.createElement('option'); o.value = u; o.textContent = u; if (u === row.unit) o.selected = true; sel.appendChild(o) }); sel.addEventListener('change', e => { rows[idx].unit = e.target.value; saveRows(rows) }); tdUnit.appendChild(sel); const tdScaled = document.createElement('td'); const out = document.createElement('div'); out.className = 'scaled'; out.textContent = (Number(row.amt || 0) * factor()).toLocaleString(undefined, { maximumFractionDigits: 2 }); tdScaled.appendChild(out); const tdDel = document.createElement('td'); const del = document.createElement('button'); del.className = 'btn'; del.textContent = 'Remove'; del.addEventListener('click', () => { rows.splice(idx, 1); saveRows(rows); renderAllRows() }); tdDel.appendChild(del); tr.append(tdName, tdAmt, tdUnit, tdScaled, tdDel); mTbody.appendChild(tr) }) }
-    function updateScaled(idx) { const tr = mTbody.children[idx]; if (!tr) return; const amt = Number(rows[idx].amt || 0); tr.querySelector('.scaled').textContent = (amt * factor()).toLocaleString(undefined, { maximumFractionDigits: 2 }) }
+    let rows = loadRows().map((r, i) => ({ id: r.id ?? ('r' + i + Date.now()), name: r.name || '', amt: Number(r.amt) || 0, unit: r.unit || 'g', out: r.out || r.unit || 'g' }));
+    const scaledOf = r => convertUnit(Number(r.amt || 0) * factor(), r.unit, r.out, densityOf(r.name));
+    function fixOut(r) { if (!outGroups(r).includes(groupOf(r.out)) || (groupOf(r.unit) === 'Count' && r.out !== r.unit)) r.out = r.unit }
+    function renderAllRows() {
+      mTbody.innerHTML = '';
+      rows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        const tdName = document.createElement('td'); const inpName = document.createElement('input'); inpName.type = 'text'; inpName.value = row.name; inpName.placeholder = 'e.g., Wheat flour'; inpName.addEventListener('input', e => { rows[idx].name = e.target.value; saveRows(rows) }); inpName.addEventListener('change', () => { fixOut(rows[idx]); saveRows(rows); renderAllRows() }); tdName.appendChild(inpName);
+        const tdAmt = document.createElement('td'); const inpAmt = document.createElement('input'); inpAmt.type = 'number'; inpAmt.step = 'any'; inpAmt.min = '0'; inpAmt.value = row.amt; inpAmt.addEventListener('input', e => { rows[idx].amt = Number(e.target.value || 0); saveRows(rows); updateScaled(idx) }); tdAmt.appendChild(inpAmt);
+        const tdUnit = document.createElement('td'); const sel = unitSelect(row.unit); sel.addEventListener('change', e => { const r = rows[idx]; r.unit = e.target.value; fixOut(r); saveRows(rows); renderAllRows() }); tdUnit.appendChild(sel);
+        const tdScaled = document.createElement('td'); const wrap = document.createElement('div'); wrap.style.cssText = 'display:flex;gap:8px;align-items:center'; tdScaled.appendChild(wrap); const out = document.createElement('div'); out.className = 'scaled'; out.style.minWidth = '70px'; out.textContent = fmt(scaledOf(row)); fixOut(row); const outSel = unitSelect(row.out, outGroups(row)); outSel.title = densityOf(row.name) ? `Weight/volume uses ${densityOf(row.name)} g/ml` : 'Add a known ingredient name (flour, oil, sugar, salt, water…) to convert between weight and volume'; outSel.style.width = 'auto'; outSel.addEventListener('change', e => { rows[idx].out = e.target.value; saveRows(rows); updateScaled(idx) }); wrap.append(out, outSel);
+        const tdDel = document.createElement('td'); const del = document.createElement('button'); del.className = 'btn'; del.textContent = 'Remove'; del.addEventListener('click', () => { rows.splice(idx, 1); saveRows(rows); renderAllRows() }); tdDel.appendChild(del);
+        tr.append(tdName, tdAmt, tdUnit, tdScaled, tdDel); mTbody.appendChild(tr)
+      })
+    }
+    function updateScaled(idx) { const tr = mTbody.children[idx]; if (!tr) return; tr.querySelector('.scaled').textContent = fmt(scaledOf(rows[idx])) }
     function updateScaledAll() { rows.forEach((_, i) => updateScaled(i)) }
-    mAdd && mAdd.addEventListener('click', () => { rows.push({ id: 'r' + Date.now(), name: '', amt: 0, unit: 'g' }); saveRows(rows); renderAllRows() });
+    mAdd && mAdd.addEventListener('click', () => { rows.push({ id: 'r' + Date.now(), name: '', amt: 0, unit: 'g', out: 'g' }); saveRows(rows); renderAllRows() });
     mClear && mClear.addEventListener('click', () => { rows = []; saveRows(rows); renderAllRows() });
-    mCopy && mCopy.addEventListener('click', () => { const f = factor(); const lines = rows.map(r => `${r.name}: ${r.amt} ${r.unit} → ${(r.amt * f).toFixed(2)} ${r.unit}`); copyText(lines.join('\n')) });
-    mExport && mExport.addEventListener('click', () => { const f = factor(); const csvRows = [["Ingredient", "Base amount", "Unit", "Scaled amount"]].concat(rows.map(r => [r.name, r.amt, r.unit, (r.amt * f).toFixed(2)])); const csv = csvRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'recipe_multiplier.csv'; a.click(); URL.revokeObjectURL(a.href) });
+    const multText = () => rows.map(r => `${r.name}: ${r.amt} ${r.unit} → ${fmt(scaledOf(r))} ${r.out}`).join('\n');
+    mCopy && mCopy.addEventListener('click', async () => flash(mCopy, await copyText(multText()) ? 'Copied!' : 'Copy failed'));
+    $('#m-share').onclick = () => shareOut($('#m-share'), `Recipe for ${mTarget.value} (base ${mBase.value})`, multText(), false);
+    mExport && mExport.addEventListener('click', () => { const csvRows = [["Ingredient", "Base amount", "Unit", "Scaled amount", "Scaled unit"]].concat(rows.map(r => [r.name, r.amt, r.unit, round(scaledOf(r), 2), r.out])); const csv = csvRows.map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n'); const blob = new Blob([csv], { type: 'text/csv' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'recipe_multiplier.csv'; a.click(); URL.revokeObjectURL(a.href) });
     mBase && mBase.addEventListener('input', () => { saveRows(rows); updateScaledAll() });
     mTarget && mTarget.addEventListener('input', () => { saveRows(rows); updateScaledAll() });
     (function init() { initUnitSelects(); loadInputs(); saveInputs(); renderAllRows(); const t = (new URL(location)).searchParams.get('t') || load('activeTab', 'calc'); setTab(['calc', 'roti', 'mult'].includes(t) ? t : 'calc'); recompute() })();
