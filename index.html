@@ -289,7 +289,7 @@
               <button class="btn" id="r-btn-reset">Reset</button>
             </div>
             <p class="lead" style="font-size:13px">Per 500 rotis: Flour = 20 lbs (25 rotis/cup) · Oil = 32 oz · Salt = 4 spoons ·
-              Water = 250 oz</p>
+              Water = 300 oz</p>
           </div>
           <div class="grid" style="grid-template-columns:1fr;gap:12px">
             <div class="kpi">
@@ -360,11 +360,11 @@
     const SALT_PER_100 = 1;
     const FLOZ_TO_LITER = 0.0295735;
     const WATER_PER_PURI_OZ = 200 / 400;
-    const ROTI_BATCH = 500;           // measured batch: 20 lb flour, 32 oz oil, 4 spoons salt, 250 oz water
+    const ROTI_BATCH = 500;           // measured batch: 20 lb flour, 32 oz oil, 4 spoons salt, 300 oz water
     const ROTI_YIELD_PER_CUP = 25;    // 500 rotis / 20 lb (1 cup = 1 lb)
     const OIL_PER_ROTI_OZ = 32 / ROTI_BATCH;
     const SALT_PER_ROTI = 4 / ROTI_BATCH;
-    const WATER_PER_ROTI_OZ = 250 / ROTI_BATCH;
+    const WATER_PER_ROTI_OZ = 300 / ROTI_BATCH;
     // Output unit conversion. Each table maps unit -> amount of that unit per 1 base unit.
     // Weight conversions for flour/oil/salt depend on these density assumptions.
     const OIL_G_PER_ML = 0.92;
