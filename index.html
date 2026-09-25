@@ -236,7 +236,7 @@
               <button class="btn" id="btn-print">Print</button>
             </div>
             <p class="lead" style="font-size:13px">Assumptions: 3.5" → 53 puris/cup · 4" → 43 puris/cup · Oil = 16 oz /
-              250 puris · Salt = 1 spoon / 100 puris</p>
+              250 puris · Salt = 1 spoon / 100 puris · Water = 200 oz / 400 puris</p>
           </div>
           <div class="grid" style="grid-template-columns:1fr;gap:12px">
             <div class="kpi">
@@ -342,7 +342,8 @@
     const CUP_TO_LITER = 0.24;
     const OIL_PER_PURI_OZ = 6 / 250;
     const SALT_PER_100 = 1;
-    const WATER_PER_FLOUR_CUP_PURIS = 0.50;
+    const FLOZ_TO_LITER = 0.0295735;
+    const WATER_PER_PURI_OZ = 200 / 400;
     const WATER_PER_FLOUR_CUP_ROTI = 0.60;
     const UNITS = ['g', 'kg', 'mg', 'lb', 'oz', 'ml', 'L', 'tsp', 'tbsp', 'cup', 'piece', 'pack', 'tray'];
     const $ = s => document.querySelector(s);
@@ -352,7 +353,7 @@
     const round = (n, d = 2) => { const f = 10 ** d; return Math.round(n * f) / f };
     function setVal(sel, v) { const el = $(sel); if (!el) return; el.textContent = Number.isFinite(v) ? v.toLocaleString(undefined, { maximumFractionDigits: 2 }) : String(v) }
     async function copyText(text) { function fb() { try { const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-9999px'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); return ok } catch { return false } } try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true } return fb() } catch { return fb() } }
-    function calcPuri(total, sizeInch) { const y = (String(sizeInch) === '3.5') ? 50 : 40; const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_PURI_OZ, salt: (total / 100) * SALT_PER_100, waterL: flour * WATER_PER_FLOUR_CUP_PURIS * CUP_TO_LITER } }
+    function calcPuri(total, sizeInch) { const y = (String(sizeInch) === '3.5') ? 50 : 40; const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_PURI_OZ, salt: (total / 100) * SALT_PER_100, waterL: total * WATER_PER_PURI_OZ * FLOZ_TO_LITER } }
     function calcRoti(total, yieldPerCup) { const y = Math.max(1, Number(yieldPerCup) || 12); const flour = total / y; return { yieldCup: y, flour, salt: (total / 100) * SALT_PER_100, waterL: flour * WATER_PER_FLOUR_CUP_ROTI * CUP_TO_LITER } }
     function renderPuri() { const ppl = Number($('#p-people').value || 0); const per = Number($('#p-per').value || 0); const size = $('#p-size').value; const total = ppl * per; const r = calcPuri(total, size); setVal('#p-total', total); setVal('#p-flour', round(r.flour, 2)); setVal('#p-oil', round(r.oil, 1)); setVal('#p-salt', round(r.salt, 1)); setVal('#p-water-l', round(r.waterL, 2)); $('#p-yield-pill').textContent = `Yield: ${r.yieldCup} puris/cup` }
     function renderRoti() { const ppl = Number($('#r-people').value || 0); const per = Number($('#r-per').value || 0); const yld = Number($('#r-yield').value || 12); const total = ppl * per; const r = calcRoti(total, yld); setVal('#r-total', total); setVal('#r-flour', round(r.flour, 2)); setVal('#r-salt', round(r.salt, 1)); setVal('#r-water-l', round(r.waterL, 2)) }
