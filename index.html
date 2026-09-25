@@ -283,13 +283,13 @@
             <label style="margin-top:10px">Rotis per person</label>
             <input id="r-per" type="number" min="0" step="1" value="3" />
             <label style="margin-top:10px">Rotis per cup of flour</label>
-            <input id="r-yield" type="number" min="1" step="1" value="12" />
+            <input id="r-yield" type="number" min="1" step="1" value="25" />
             <div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap">
               <button class="btn" id="r-btn-copy">Copy link</button>
               <button class="btn" id="r-btn-reset">Reset</button>
             </div>
-            <p class="lead" style="font-size:13px">Defaults: yield 12 rotis/cup · Salt = 1 spoon / 100 rotis. No frying
-              oil assumed.</p>
+            <p class="lead" style="font-size:13px">Per 500 rotis: Flour = 20 lbs (25 rotis/cup) · Oil = 32 oz · Salt = 4 spoons ·
+              Water = 250 oz</p>
           </div>
           <div class="grid" style="grid-template-columns:1fr;gap:12px">
             <div class="kpi">
@@ -299,6 +299,10 @@
             <div class="kpi">
               <h3>Flour needed</h3>
               <div class="val"><span id="r-flour">0</span> <select class="unit-sel" id="r-flour-unit" data-kind="flour" aria-label="Flour unit"></select></div>
+            </div>
+            <div class="kpi">
+              <h3>Oil needed</h3>
+              <div class="val"><span id="r-oil">0</span> <select class="unit-sel" id="r-oil-unit" data-kind="oil" aria-label="Oil unit"></select></div>
             </div>
             <div class="kpi">
               <h3>Salt needed</h3>
@@ -356,7 +360,11 @@
     const SALT_PER_100 = 1;
     const FLOZ_TO_LITER = 0.0295735;
     const WATER_PER_PURI_OZ = 200 / 400;
-    const WATER_PER_FLOUR_CUP_ROTI = 0.60;
+    const ROTI_BATCH = 500;           // measured batch: 20 lb flour, 32 oz oil, 4 spoons salt, 250 oz water
+    const ROTI_YIELD_PER_CUP = 25;    // 500 rotis / 20 lb (1 cup = 1 lb)
+    const OIL_PER_ROTI_OZ = 32 / ROTI_BATCH;
+    const SALT_PER_ROTI = 4 / ROTI_BATCH;
+    const WATER_PER_ROTI_OZ = 250 / ROTI_BATCH;
     // Output unit conversion. Each table maps unit -> amount of that unit per 1 base unit.
     // Weight conversions for flour/oil/salt depend on these density assumptions.
     const OIL_G_PER_ML = 0.92;
@@ -380,19 +388,19 @@
     function setQty(valSel, unitSel, baseAmt) { const u = $(unitSel); const t = OUTPUT_UNITS[u.dataset.kind]; const f = t.units[u.value] ?? 1; const v = baseAmt * f; setVal(valSel, round(v, Math.abs(v) >= 100 ? 0 : 2)) }
     async function copyText(text) { function fb() { try { const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.top = '-9999px'; document.body.appendChild(ta); ta.select(); const ok = document.execCommand('copy'); document.body.removeChild(ta); return ok } catch { return false } } try { if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true } return fb() } catch { return fb() } }
     function calcPuri(total, sizeInch) { const y = (String(sizeInch) === '3.5') ? 50 : 40; const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_PURI_OZ, salt: (total / 100) * SALT_PER_100, waterL: total * WATER_PER_PURI_OZ * FLOZ_TO_LITER } }
-    function calcRoti(total, yieldPerCup) { const y = Math.max(1, Number(yieldPerCup) || 12); const flour = total / y; return { yieldCup: y, flour, salt: (total / 100) * SALT_PER_100, waterL: flour * WATER_PER_FLOUR_CUP_ROTI * CUP_TO_LITER } }
+    function calcRoti(total, yieldPerCup) { const y = Math.max(1, Number(yieldPerCup) || ROTI_YIELD_PER_CUP); const flour = total / y; return { yieldCup: y, flour, oil: total * OIL_PER_ROTI_OZ, salt: total * SALT_PER_ROTI, waterL: total * WATER_PER_ROTI_OZ * FLOZ_TO_LITER } }
     function renderPuri() { const ppl = Number($('#p-people').value || 0); const per = Number($('#p-per').value || 0); const size = $('#p-size').value; const total = ppl * per; const r = calcPuri(total, size); setVal('#p-total', total); setQty('#p-flour', '#p-flour-unit', r.flour); setQty('#p-oil', '#p-oil-unit', r.oil); setQty('#p-salt', '#p-salt-unit', r.salt); setQty('#p-water-l', '#p-water-unit', r.waterL); $('#p-yield-pill').textContent = `Yield: ${r.yieldCup} puris/cup` }
-    function renderRoti() { const ppl = Number($('#r-people').value || 0); const per = Number($('#r-per').value || 0); const yld = Number($('#r-yield').value || 12); const total = ppl * per; const r = calcRoti(total, yld); setVal('#r-total', total); setQty('#r-flour', '#r-flour-unit', r.flour); setQty('#r-salt', '#r-salt-unit', r.salt); setQty('#r-water-l', '#r-water-unit', r.waterL) }
+    function renderRoti() { const ppl = Number($('#r-people').value || 0); const per = Number($('#r-per').value || 0); const yld = Number($('#r-yield').value || ROTI_YIELD_PER_CUP); const total = ppl * per; const r = calcRoti(total, yld); setVal('#r-total', total); setQty('#r-flour', '#r-flour-unit', r.flour); setQty('#r-oil', '#r-oil-unit', r.oil); setQty('#r-salt', '#r-salt-unit', r.salt); setQty('#r-water-l', '#r-water-unit', r.waterL) }
     function recompute() { renderPuri(); renderRoti(); if ($('#view-mult').classList.contains('active')) updateScaledAll() }
     const tabMap = { calc: 'view-calc', roti: 'view-roti', mult: 'view-mult' };
     function setTab(t) { Object.entries(tabMap).forEach(([k, v]) => { document.getElementById(v).classList.toggle('active', k === t); document.querySelector(`.tab[data-tab="${k}"]`).classList.toggle('active', k === t) }); const url = new URL(location); url.searchParams.set('t', t); history.replaceState(null, '', url); store('activeTab', t); recompute() }
     $$('.tab').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
-    ['#p-people', '#p-per', '#p-size', '#r-people', '#r-per', '#r-yield'].forEach(sel => { const el = $(sel); if (!el) return; el.addEventListener('input', () => { if (sel.startsWith('#p-')) { store('p.people', Number($('#p-people').value || 0)); store('p.per', Number($('#p-per').value || 0)); store('p.size', $('#p-size').value) } else { store('r.people', Number($('#r-people').value || 0)); store('r.per', Number($('#r-per').value || 0)); store('r.yield', Number($('#r-yield').value || 12)) } recompute() }) });
+    ['#p-people', '#p-per', '#p-size', '#r-people', '#r-per', '#r-yield'].forEach(sel => { const el = $(sel); if (!el) return; el.addEventListener('input', () => { if (sel.startsWith('#p-')) { store('p.people', Number($('#p-people').value || 0)); store('p.per', Number($('#p-per').value || 0)); store('p.size', $('#p-size').value) } else { store('r.people', Number($('#r-people').value || 0)); store('r.per', Number($('#r-per').value || 0)); store('r.yield', Number($('#r-yield').value || ROTI_YIELD_PER_CUP)) } recompute() }) });
     $('#btn-copy') && ($('#btn-copy').onclick = () => copyText(location.href));
     $('#r-btn-copy') && ($('#r-btn-copy').onclick = () => copyText(location.href));
     $('#btn-print') && ($('#btn-print').onclick = () => window.print());
     $('#btn-reset') && ($('#btn-reset').onclick = () => { $('#p-people').value = 50; $('#p-per').value = 4; $('#p-size').value = '4'; recompute() });
-    $('#r-btn-reset') && ($('#r-btn-reset').onclick = () => { $('#r-people').value = 50; $('#r-per').value = 3; $('#r-yield').value = 12; recompute() });
+    $('#r-btn-reset') && ($('#r-btn-reset').onclick = () => { $('#r-people').value = 50; $('#r-per').value = 3; $('#r-yield').value = ROTI_YIELD_PER_CUP; recompute() });
     const mBase = $('#m-base'), mTarget = $('#m-target'), mTbody = $('#m-tbody');
     const mAdd = $('#m-add'), mClear = $('#m-clear'), mCopy = $('#m-copy'), mExport = $('#m-export');
     function factor() { const b = Math.max(1, Number(mBase?.value) || 1); const t = Math.max(1, Number(mTarget?.value) || 1); return t / b }
